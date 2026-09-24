@@ -121,7 +121,21 @@ export function App() {
 
   const connectSocket = () => {
     if (socket && socket.connected) return socket;
-    const endpoint = (import.meta.env.VITE_SOCKET_URL as string) || `${window.location.protocol}//${window.location.hostname}:3001`;
+
+    const rawSocketUrl = ((import.meta.env.VITE_SOCKET_URL as string) || '').trim();
+    const isLocalhost = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    );
+    const endpoint = rawSocketUrl || (isLocalhost ? `${window.location.protocol}//${window.location.hostname}:3001` : '');
+
+    if (!endpoint) {
+      setNotice('Server URL is not configured. Please set VITE_SOCKET_URL in your deployment settings.');
+      const fallback = socket || io({ autoConnect: false });
+      if (!socket) setSocket(fallback);
+      return fallback;
+    }
+
     const s = io(endpoint);
 
     s.on('game:state', (newState: ClientGameState) => {
@@ -139,7 +153,11 @@ export function App() {
     });
 
     s.on('connect_error', () => {
-      setNotice('Unable to connect to game server. Make sure server is running on port 3001.');
+      if (isLocalhost) {
+        setNotice('Unable to connect to game server. Make sure server is running on port 3001.');
+      } else {
+        setNotice('Unable to connect to game server. The backend may be spinning up or temporarily unreachable.');
+      }
     });
 
     setSocket(s);

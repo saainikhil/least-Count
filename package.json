@@ -7,6 +7,7 @@
     "dev": "npm --prefix frontend run dev",
     "build": "tsc -p frontend/tsconfig.json && vite build frontend",
     "test": "vitest run",
+    "start": "tsx backend/server.ts",
     "server": "tsx backend/server.ts",
     "install:all": "npm install --prefix frontend && npm install"
   },
@@ -16,13 +17,13 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vitest": "^2.1.4",
-    "tsx": "^4.19.2",
     "@types/node": "^22.7.5",
     "@types/express": "^5.0.0",
     "@types/react": "^18.3.3",

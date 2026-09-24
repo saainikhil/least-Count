@@ -75,6 +75,7 @@ describe('Least Count Game Engine - Core Rules Verification', () => {
     ];
     engine.hands.set('p1', p1Hand);
     engine.hands.set('p2', p2Hand);
+    engine.discardPile = [{ id: 'init_open', rank: '10', suit: 'hearts', deckId: 1 }];
     engine.activePlayerId = 'p1';
     engine.phase = 'SELECTING_DROP';
     // P1 drops non-matching Q -> P1 must draw

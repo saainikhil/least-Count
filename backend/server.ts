@@ -26,8 +26,31 @@ export function generateRoomCode(): string {
 
 const app = express();
 const httpServer = createServer(app);
+
+const allowedOrigins = [
+  'https://leastcountin.netlify.app',
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+];
+
 const io = new Server(httpServer, {
-  cors: { origin: '*' }
+  cors: {
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. curl, server-to-server, health probes)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow localhost and 127.0.0.1 on any port for local development
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+app.get('/health', (_req, res) => {
+  res.status(200).send('OK');
 });
 
 // Produce sanitized, server-authoritative state for a given viewing player
@@ -446,8 +469,8 @@ io.on('connection', socket => {
 
 const PORT = Number(process.env.PORT) || 3001;
 if (process.env.NODE_ENV !== 'test') {
-  httpServer.listen(PORT, () => {
-    console.log(`Least Count server listening on port ${PORT}`);
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Least Count server listening on 0.0.0.0:${PORT}`);
   });
 }
 
