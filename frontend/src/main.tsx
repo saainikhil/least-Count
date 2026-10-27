@@ -15,8 +15,9 @@ import { Table } from './components/Table';
 import { ScoreModal } from './components/ScoreModal';
 import { GameOverModal } from './components/GameOverModal';
 import { ProfileModal } from './components/ProfileModal';
-import { soundManager } from './services/soundManager';
-import { useGameSounds } from './hooks/useGameSounds';
+// [SOUND_FEATURE_DISABLED]
+// import { soundManager } from './services/soundManager';
+// import { useGameSounds } from './hooks/useGameSounds';
 import { playerProfileManager, PlayerProfile } from './services/playerProfile';
 
 import './styles/styles.css';
@@ -46,11 +47,8 @@ export function App() {
   const [theme, setTheme] = useState('Green');
   const [font, setFont] = useState('DM Sans');
   const [cardStyle, setCardStyle] = useState('Classic');
-  const [soundEnabled, setSoundEnabled] = useState(soundManager.isSoundEnabled());
-
-  useEffect(() => {
-    return soundManager.subscribe(setSoundEnabled);
-  }, []);
+  // [SOUND_FEATURE_DISABLED] Sound settings disabled for current release
+  // const [soundEnabled, setSoundEnabled] = useState(false);
 
   // Socket & Room State
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -345,7 +343,7 @@ export function App() {
       if (res?.error) {
         setNotice(res.error);
       } else {
-        soundManager.playShuffle();
+        // soundManager.playShuffle(); // [SOUND_FEATURE_DISABLED]
       }
     });
   };
@@ -418,7 +416,7 @@ export function App() {
         setTimeout(() => {
           if (engine.setupStage === 'SETUP_SHUFFLE') {
             engine.shuffleAndDistribute('system-bot');
-            soundManager.playShuffle();
+            // soundManager.playShuffle(); // [SOUND_FEATURE_DISABLED]
           } else if (engine.setupStage === 'SETUP_OPEN_CARD') {
             engine.pickOpenCard('system-bot');
           } else if (engine.setupStage === 'SETUP_JOKER_CARD') {
@@ -450,7 +448,7 @@ export function App() {
     if (!engine) return;
     try {
       engine.shuffleAndDistribute('human-player');
-      soundManager.playShuffle();
+      // soundManager.playShuffle(); // [SOUND_FEATURE_DISABLED]
       setSystemStateTick(t => t + 1);
     } catch (err) {
       setNotice((err as Error).message);
@@ -485,7 +483,7 @@ export function App() {
     if (!engine) return;
     try {
       engine.drop('human-player', cardIds);
-      soundManager.playCardDrop(false);
+      // soundManager.playCardDrop(false); // [SOUND_FEATURE_DISABLED]
       setNotice('');
       setSystemStateTick(t => t + 1);
     } catch (err) {
@@ -499,14 +497,10 @@ export function App() {
     try {
       const willRecycle = kind === 'draw' && engine.drawPile.length === 0 && engine.discardPile.length > 1;
       engine.acquire('human-player', kind);
-      if (willRecycle) {
-        soundManager.playShuffle();
-      }
-      if (kind === 'draw') {
-        soundManager.playCardDraw(false);
-      } else {
-        soundManager.playCardPick(false);
-      }
+      // [SOUND_FEATURE_DISABLED]
+      // if (willRecycle) soundManager.playShuffle();
+      // if (kind === 'draw') soundManager.playCardDraw(false);
+      // else soundManager.playCardPick(false);
       setNotice('');
       setSystemStateTick(t => t + 1);
     } catch (err) {
@@ -578,13 +572,13 @@ export function App() {
 
   const activeGameState = screen === 'game' ? sState?.game : systemClientGameState;
   const activeCurrentRound = screen === 'game' ? (sState?.currentRound || 1) : (systemEngine?.roundNumber || 1);
-  const soundPlayerId = screen === 'system' ? 'human-player' : myPlayerId;
-
-  useGameSounds({
-    myPlayerId: soundPlayerId,
-    gameState: activeGameState,
-    currentRound: activeCurrentRound,
-  });
+  // [SOUND_FEATURE_DISABLED]
+  // const soundPlayerId = screen === 'system' ? 'human-player' : myPlayerId;
+  // useGameSounds({
+  //   myPlayerId: soundPlayerId,
+  //   gameState: activeGameState,
+  //   currentRound: activeCurrentRound,
+  // });
 
   // Render Page Views
   if (screen === 'home') {
@@ -629,11 +623,11 @@ export function App() {
         theme={theme}
         font={font}
         cardStyle={cardStyle}
-        soundEnabled={soundEnabled}
+        // soundEnabled={soundEnabled} // [SOUND_FEATURE_DISABLED]
         onThemeChange={setTheme}
         onFontChange={setFont}
         onCardStyleChange={setCardStyle}
-        onSoundChange={enabled => soundManager.setSoundEnabled(enabled)}
+        // onSoundChange={enabled => soundManager.setSoundEnabled(enabled)} // [SOUND_FEATURE_DISABLED]
         onBack={() => setScreen('home')}
       />
     );
@@ -702,7 +696,7 @@ export function App() {
               if (res?.error) {
                 setNotice(res.error);
               } else {
-                soundManager.playCardDrop(false);
+                // soundManager.playCardDrop(false); // [SOUND_FEATURE_DISABLED]
               }
             });
           }}
@@ -716,11 +710,9 @@ export function App() {
               if (res?.error) {
                 setNotice(res.error);
               } else {
-                if (kind === 'draw') {
-                  soundManager.playCardDraw(false);
-                } else {
-                  soundManager.playCardPick(false);
-                }
+                // [SOUND_FEATURE_DISABLED]
+                // if (kind === 'draw') soundManager.playCardDraw(false);
+                // else soundManager.playCardPick(false);
               }
             });
           }}

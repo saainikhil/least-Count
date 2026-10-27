@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card as CardType, ClientGameState, PlayerPublicState, PlayerInfo } from '../types/game';
 import { Card } from './Card';
 import { scoreHand } from '../game/engine';
-import { soundManager } from '../services/soundManager';
+// import { soundManager } from '../services/soundManager'; // [SOUND_FEATURE_DISABLED]
 
 interface TableProps {
   myPlayerId: string;
@@ -45,11 +45,7 @@ export const Table: React.FC<TableProps> = ({
   const [showDevScore, setShowDevScore] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPlayerOrderMenu, setShowPlayerOrderMenu] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(soundManager.isSoundEnabled());
-
-  useEffect(() => {
-    return soundManager.subscribe(setSoundEnabled);
-  }, []);
+  // const [soundEnabled, setSoundEnabled] = useState(false); // [SOUND_FEATURE_DISABLED]
 
   const currentPid = (myPlayerId || sessionStorage.getItem('lc_player_id') || '').trim();
   const currentDisplayName = (sessionStorage.getItem('lc_display_name') || '').trim();
@@ -157,9 +153,7 @@ export const Table: React.FC<TableProps> = ({
     if (!isMyTurn || isSetupActive) return;
     setSelectedIds(prev => {
       const willSelect = !prev.includes(cardId);
-      if (willSelect) {
-        soundManager.playCardSelect();
-      }
+      // if (willSelect) soundManager.playCardSelect(); // [SOUND_FEATURE_DISABLED]
       return willSelect ? [...prev, cardId] : prev.filter(id => id !== cardId);
     });
   };
@@ -175,7 +169,7 @@ export const Table: React.FC<TableProps> = ({
     const cardsToDrag = selectedIds.includes(cardId) ? selectedIds : [cardId];
     if (!selectedIds.includes(cardId)) {
       setSelectedIds([cardId]);
-      soundManager.playCardSelect();
+      // soundManager.playCardSelect(); // [SOUND_FEATURE_DISABLED]
     }
     e.dataTransfer.setData('application/json', JSON.stringify({ cardIds: cardsToDrag }));
   };
@@ -299,6 +293,7 @@ export const Table: React.FC<TableProps> = ({
             {showSettingsMenu && (
               <div className="dev-settings-popover">
                 <div className="dev-settings-header">SETTINGS</div>
+                {/* [SOUND_FEATURE_DISABLED]
                 <label className="dev-setting-option">
                   <input
                     type="checkbox"
@@ -307,6 +302,7 @@ export const Table: React.FC<TableProps> = ({
                   />
                   <span>SOUND EFFECTS: {soundEnabled ? 'ON' : 'OFF'}</span>
                 </label>
+                */}
                 <label className="dev-setting-option">
                   <input
                     type="checkbox"
