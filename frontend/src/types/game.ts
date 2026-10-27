@@ -20,14 +20,18 @@ export type GamePhase =
 
 export interface PlayerInfo {
   id: string;
+  socketId?: string;
   name: string;
   ready: boolean;
+  connected?: boolean;
+  token?: string;
 }
 
 export interface PlayerPublicState {
   id: string;
   name: string;
   cardCount: number;
+  connected?: boolean;
 }
 
 export type SetupStage =

@@ -171,3 +171,173 @@ describe('Least Count Game Engine - Core Rules Verification', () => {
     expect(engine.startingPlayerId).toBe('p1');
   });
 });
+
+describe('Draw Deck Automatic Recycling', () => {
+  it('1. When the draw deck is empty, eligible discard cards are recycled and shuffled', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true);
+    engine.drawPile = [];
+    const discardCards: Card[] = [
+      { id: 'c1', rank: '7', suit: 'hearts', deckId: 1 },
+      { id: 'c2', rank: 'K', suit: 'spades', deckId: 1 },
+      { id: 'c3', rank: '3', suit: 'diamonds', deckId: 1 },
+      { id: 'c4', rank: 'Q', suit: 'clubs', deckId: 1 },
+    ];
+    engine.discardPile = [...discardCards];
+
+    const recycled = engine.recycleDiscardPileIntoDrawPile();
+    expect(recycled).toBe(true);
+    // Draw pile should contain 3 recycled cards
+    expect(engine.drawPile).toHaveLength(3);
+    const drawCardIds = engine.drawPile.map(c => c.id).sort();
+    expect(drawCardIds).toEqual(['c1', 'c2', 'c3']);
+  });
+
+  it('2. The topmost discard card remains visible and unchanged', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true);
+    engine.drawPile = [];
+    const topCard: Card = { id: 'top_qc', rank: 'Q', suit: 'clubs', deckId: 1 };
+    engine.discardPile = [
+      { id: 'c1', rank: '7', suit: 'hearts', deckId: 1 },
+      { id: 'c2', rank: 'K', suit: 'spades', deckId: 1 },
+      { id: 'c3', rank: '3', suit: 'diamonds', deckId: 1 },
+      topCard,
+    ];
+
+    engine.recycleDiscardPileIntoDrawPile();
+
+    expect(engine.discardPile).toHaveLength(1);
+    expect(engine.discardPile[0]).toEqual(topCard);
+    expect(engine.discardPile.at(-1)).toEqual(topCard);
+  });
+
+  it('3. The next draw can proceed normally after recycling', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true);
+    engine.activePlayerId = 'p1';
+    engine.hands.set('p1', [{ id: 'p1_1', rank: 'A', suit: 'spades', deckId: 1 }]);
+    engine.hands.set('p2', [{ id: 'p2_1', rank: '2', suit: 'spades', deckId: 1 }]);
+    engine.drawPile = [];
+    const topCard: Card = { id: 'top_qc', rank: 'Q', suit: 'clubs', deckId: 1 };
+    engine.discardPile = [
+      { id: 'c1', rank: '7', suit: 'hearts', deckId: 1 },
+      { id: 'c2', rank: 'K', suit: 'spades', deckId: 1 },
+      topCard,
+    ];
+    engine.phase = 'WAITING_FOR_DRAW';
+
+    expect(() => engine.acquire('p1', 'draw')).not.toThrow();
+
+    // p1 drew 1 card, so hand length is now 2
+    expect(engine.hands.get('p1')).toHaveLength(2);
+    // Discard pile still has top_qc
+    expect(engine.discardPile).toHaveLength(1);
+    expect(engine.discardPile[0].id).toBe('top_qc');
+    // Turn advanced to p2
+    expect(engine.activePlayerId).toBe('p2');
+    expect(engine.phase).toBe('SELECTING_DROP');
+  });
+
+  it('4. No card is duplicated or lost', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true);
+    engine.drawPile = [];
+    const topCard: Card = { id: 'top_card', rank: '9', suit: 'diamonds', deckId: 1 };
+    const discards: Card[] = [
+      { id: 'd1', rank: '2', suit: 'hearts', deckId: 1 },
+      { id: 'd2', rank: '4', suit: 'clubs', deckId: 1 },
+      { id: 'd3', rank: '6', suit: 'spades', deckId: 1 },
+      topCard,
+    ];
+    engine.discardPile = [...discards];
+
+    const initialTotalIds = [
+      ...Array.from(engine.hands.values()).flat().map(c => c.id),
+      ...engine.drawPile.map(c => c.id),
+      ...engine.discardPile.map(c => c.id),
+    ].sort();
+
+    engine.recycleDiscardPileIntoDrawPile();
+
+    const afterTotalIds = [
+      ...Array.from(engine.hands.values()).flat().map(c => c.id),
+      ...engine.drawPile.map(c => c.id),
+      ...engine.discardPile.map(c => c.id),
+    ].sort();
+
+    expect(afterTotalIds).toEqual(initialTotalIds);
+    expect(new Set(afterTotalIds).size).toBe(afterTotalIds.length); // no duplicates
+  });
+
+  it('5. Player hands remain unchanged during recycling', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true);
+    const p1OriginalHand = [...(engine.hands.get('p1') || [])];
+    const p2OriginalHand = [...(engine.hands.get('p2') || [])];
+
+    engine.drawPile = [];
+    engine.discardPile = [
+      { id: 'd1', rank: '2', suit: 'hearts', deckId: 1 },
+      { id: 'd2', rank: '4', suit: 'clubs', deckId: 1 },
+      { id: 'top', rank: 'K', suit: 'spades', deckId: 1 },
+    ];
+
+    engine.recycleDiscardPileIntoDrawPile();
+
+    expect(engine.hands.get('p1')).toEqual(p1OriginalHand);
+    expect(engine.hands.get('p2')).toEqual(p2OriginalHand);
+  });
+
+  it('6. The game handles an empty draw deck with no recyclable cards safely', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true);
+    engine.drawPile = [];
+    engine.discardPile = [{ id: 'only_top', rank: 'K', suit: 'spades', deckId: 1 }];
+    engine.activePlayerId = 'p1';
+    engine.phase = 'WAITING_FOR_DRAW';
+
+    // recycleDiscardPileIntoDrawPile returns false safely
+    const recycled = engine.recycleDiscardPileIntoDrawPile();
+    expect(recycled).toBe(false);
+    expect(engine.drawPile).toHaveLength(0);
+    expect(engine.discardPile).toHaveLength(1);
+
+    // acquire safely throws error per existing game rules
+    expect(() => engine.acquire('p1', 'draw')).toThrow('No cards remaining in draw pile');
+    expect(engine.drawPile).toHaveLength(0);
+    expect(engine.discardPile).toHaveLength(1);
+    expect(engine.phase).toBe('WAITING_FOR_DRAW');
+  });
+
+  it('7. Recycling works repeatedly if the new draw deck later becomes empty again', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true);
+    engine.activePlayerId = 'p1';
+    engine.hands.set('p1', [{ id: 'p1_card', rank: 'J', suit: 'spades', deckId: 1 }]);
+    engine.hands.set('p2', [
+      { id: 'p2_card', rank: 'Q', suit: 'hearts', deckId: 1 },
+      { id: 'p2_extra', rank: '2', suit: 'diamonds', deckId: 1 },
+    ]);
+
+    // Round 1 of recycling: 2 discard cards (1 recycled, 1 top)
+    engine.drawPile = [];
+    engine.discardPile = [
+      { id: 'rec_1', rank: '3', suit: 'hearts', deckId: 1 },
+      { id: 'top_1', rank: '8', suit: 'clubs', deckId: 1 },
+    ];
+    engine.phase = 'WAITING_FOR_DRAW';
+
+    engine.acquire('p1', 'draw');
+    expect(engine.hands.get('p1')).toHaveLength(2);
+    expect(engine.drawPile).toHaveLength(0); // Deck empty again!
+    expect(engine.discardPile[0].id).toBe('top_1');
+
+    // p2 turn: drops a card into discard pile
+    expect(engine.activePlayerId).toBe('p2');
+    engine.drop('p2', ['p2_card']);
+    expect(engine.phase).toBe('WAITING_FOR_DRAW');
+    // Discard pile now has: top_1 and p2_card (2 cards)
+    expect(engine.discardPile).toHaveLength(2);
+
+    // Round 2 of recycling: draw pile is empty again, should recycle top_1 while preserving p2_card
+    expect(() => engine.acquire('p2', 'draw')).not.toThrow();
+    expect(engine.hands.get('p2')).toHaveLength(2);
+    expect(engine.discardPile).toHaveLength(1);
+    expect(engine.discardPile[0].id).toBe('p2_card');
+  });
+});
+

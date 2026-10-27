@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 interface FriendsPageProps {
   initialRoomCode?: string;
+  defaultName?: string;
   onCreateRoom: (name: string, players: number, rounds: number) => void;
   onJoinRoom: (name: string, roomCode: string) => void;
   onBack: () => void;
@@ -10,13 +11,14 @@ interface FriendsPageProps {
 
 export const FriendsPage: React.FC<FriendsPageProps> = ({
   initialRoomCode = '',
+  defaultName = '',
   onCreateRoom,
   onJoinRoom,
   onBack,
   notice,
 }) => {
-  const [createName, setCreateName] = useState('');
-  const [joinName, setJoinName] = useState('');
+  const [createName, setCreateName] = useState(defaultName);
+  const [joinName, setJoinName] = useState(defaultName);
   const [roomCode, setRoomCode] = useState(initialRoomCode);
   const [playersInput, setPlayersInput] = useState('4');
   const [roundsInput, setRoundsInput] = useState('10');
@@ -27,6 +29,13 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
       setRoomCode(initialRoomCode);
     }
   }, [initialRoomCode]);
+
+  useEffect(() => {
+    if (defaultName) {
+      setCreateName(prev => prev || defaultName);
+      setJoinName(prev => prev || defaultName);
+    }
+  }, [defaultName]);
 
   const handleCreateSubmit = () => {
     setLocalNotice('');

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card as CardType, ClientGameState, PlayerPublicState, PlayerInfo } from '../types/game';
 import { Card } from './Card';
 import { scoreHand } from '../game/engine';
+import { soundManager } from '../services/soundManager';
 
 interface TableProps {
   myPlayerId: string;
@@ -44,6 +45,11 @@ export const Table: React.FC<TableProps> = ({
   const [showDevScore, setShowDevScore] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPlayerOrderMenu, setShowPlayerOrderMenu] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(soundManager.isSoundEnabled());
+
+  useEffect(() => {
+    return soundManager.subscribe(setSoundEnabled);
+  }, []);
 
   const currentPid = (myPlayerId || sessionStorage.getItem('lc_player_id') || '').trim();
   const currentDisplayName = (sessionStorage.getItem('lc_display_name') || '').trim();
@@ -149,7 +155,13 @@ export const Table: React.FC<TableProps> = ({
 
   const toggleSelectCard = (cardId: string) => {
     if (!isMyTurn || isSetupActive) return;
-    setSelectedIds(prev => (prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]));
+    setSelectedIds(prev => {
+      const willSelect = !prev.includes(cardId);
+      if (willSelect) {
+        soundManager.playCardSelect();
+      }
+      return willSelect ? [...prev, cardId] : prev.filter(id => id !== cardId);
+    });
   };
 
   const handleDropClick = () => {
@@ -163,6 +175,7 @@ export const Table: React.FC<TableProps> = ({
     const cardsToDrag = selectedIds.includes(cardId) ? selectedIds : [cardId];
     if (!selectedIds.includes(cardId)) {
       setSelectedIds([cardId]);
+      soundManager.playCardSelect();
     }
     e.dataTransfer.setData('application/json', JSON.stringify({ cardIds: cardsToDrag }));
   };
@@ -286,6 +299,14 @@ export const Table: React.FC<TableProps> = ({
             {showSettingsMenu && (
               <div className="dev-settings-popover">
                 <div className="dev-settings-header">SETTINGS</div>
+                <label className="dev-setting-option">
+                  <input
+                    type="checkbox"
+                    checked={soundEnabled}
+                    onChange={e => soundManager.setSoundEnabled(e.target.checked)}
+                  />
+                  <span>SOUND EFFECTS: {soundEnabled ? 'ON' : 'OFF'}</span>
+                </label>
                 <label className="dev-setting-option">
                   <input
                     type="checkbox"

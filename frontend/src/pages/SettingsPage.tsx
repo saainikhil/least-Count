@@ -4,9 +4,11 @@ interface SettingsPageProps {
   theme: string;
   font: string;
   cardStyle: string;
+  soundEnabled: boolean;
   onThemeChange: (t: string) => void;
   onFontChange: (f: string) => void;
   onCardStyleChange: (c: string) => void;
+  onSoundChange: (enabled: boolean) => void;
   onBack: () => void;
 }
 
@@ -14,9 +16,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   theme,
   font,
   cardStyle,
+  soundEnabled,
   onThemeChange,
   onFontChange,
   onCardStyleChange,
+  onSoundChange,
   onBack,
 }) => {
   return (
@@ -27,6 +31,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
       <div className="simple-card settings-card">
         <h2>Settings</h2>
+
+        <label>
+          SOUND EFFECTS
+          <select value={soundEnabled ? 'ON' : 'OFF'} onChange={e => onSoundChange(e.target.value === 'ON')}>
+            <option value="ON">ON (Default)</option>
+            <option value="OFF">OFF</option>
+          </select>
+        </label>
 
         <label>
           THEME

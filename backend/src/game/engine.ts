@@ -251,6 +251,21 @@ export class GameEngine {
     }
   }
 
+  recycleDiscardPileIntoDrawPile(): boolean {
+    if (this.drawPile.length > 0) {
+      return false;
+    }
+    if (this.discardPile.length <= 1) {
+      return false;
+    }
+
+    const topDiscard = this.discardPile[this.discardPile.length - 1];
+    const recyclable = this.discardPile.slice(0, -1);
+    this.discardPile = [topDiscard];
+    this.drawPile = shuffleDeck(recyclable);
+    return true;
+  }
+
   acquire(playerId: string, kind: 'draw' | 'pick') {
     this.assertTurn(playerId);
     if (this.phase !== 'WAITING_FOR_DRAW') {
@@ -262,14 +277,10 @@ export class GameEngine {
 
     if (kind === 'draw') {
       if (this.drawPile.length === 0) {
-        // Recycle discard pile except top card
-        if (this.discardPile.length <= 1) {
-          throw new Error('No cards remaining in draw pile');
-        }
-        const topDiscard = this.discardPile.pop()!;
-        const recyclable = [...this.discardPile];
-        this.discardPile = [topDiscard];
-        this.drawPile = shuffleDeck(recyclable);
+        this.recycleDiscardPileIntoDrawPile();
+      }
+      if (this.drawPile.length === 0) {
+        throw new Error('No cards remaining in draw pile');
       }
       acquiredCard = this.drawPile.pop();
     } else { // pick

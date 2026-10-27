@@ -1,20 +1,42 @@
 import React from 'react';
 
 interface HomePageProps {
+  profileName?: string;
+  onOpenProfile: () => void;
   onSelectSystem: () => void;
   onSelectFriends: () => void;
   onSelectRules: () => void;
   onSelectSettings: () => void;
+  onSelectAbout: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
+  profileName,
+  onOpenProfile,
   onSelectSystem,
   onSelectFriends,
   onSelectRules,
   onSelectSettings,
+  onSelectAbout,
 }) => {
   return (
     <main className="app home-screen">
+      <div className="home-topbar">
+        <button
+          className="profile-pill-btn"
+          onClick={onOpenProfile}
+          title="Click to view or edit your profile"
+        >
+          <span className="profile-avatar">
+            {profileName ? profileName.charAt(0).toUpperCase() : '👤'}
+          </span>
+          <span className="profile-display-name">
+            {profileName || 'Set Name'}
+          </span>
+          <span className="profile-edit-glyph">✎</span>
+        </button>
+      </div>
+
       <div className="home-inner">
         <header className="brand">
           <div className="brand-mark">LC</div>
@@ -55,12 +77,24 @@ export const HomePage: React.FC<HomePageProps> = ({
             <small>Theme, Fonts & Card Styles</small>
             <i>→</i>
           </button>
+
+          <button className="mode-card compact-card" onClick={onSelectAbout}>
+            <span className="mode-icon">♥</span>
+            <b>ABOUT US</b>
+            <small>Our Journey & Story</small>
+            <i>→</i>
+          </button>
         </div>
 
         <p className="home-note">
           Original physical rules. Pure strategy & low score target.
         </p>
       </div>
+
+      <div className="developer-credit">
+        Developed by Saai NikhiL
+      </div>
     </main>
   );
 };
+

@@ -30,12 +30,14 @@ export interface PlayerInfo {
   name: string;
   ready: boolean;
   connected?: boolean;
+  token?: string;
 }
 
 export interface PlayerPublicState {
   id: string;
   name: string;
   cardCount: number;
+  connected?: boolean;
 }
 
 export interface ClientGameState {
