@@ -42,10 +42,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="brand-mark">LC</div>
           <div>
             <p className="eyebrow">ONLINE MULTIPLAYER CARD GAME</p>
-            <h1>
-              Least<br />
-              <em>Count</em>
-            </h1>
+            <h1>Least<em>Count</em></h1>
           </div>
         </header>
 

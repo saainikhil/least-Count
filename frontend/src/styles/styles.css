@@ -123,8 +123,9 @@ button:disabled {
 }
 
 .brand h1 {
-  font: 700 clamp(54px, 8vw, 92px) / 0.88 'Playfair Display', serif;
-  letter-spacing: -3px;
+  font: 700 clamp(35px, 5.2vw, 60px) / 0.92 'Playfair Display', serif;
+  letter-spacing: -2px;
+  white-space: nowrap;
   margin: 0;
 }
 
@@ -650,21 +651,23 @@ button:disabled {
   margin-left: 0;
 }
 
-.mini-card-backs .card-back-pattern {
+.mini-card-backs .card-back-pattern,
+.mini-card-backs .card-back-inner {
   width: 100%;
   height: 100%;
   padding: 0;
   margin: 0;
-  border: 1px solid #795e24;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
 }
+.mini-card-backs .card-back-label,
 
 .mini-card-backs .card-back-pattern span {
   font: 800 9px 'DM Mono', monospace;
-  color: #594619;
+  color: #d7ae57;
 }
 
 .turn-indicator-pill {
@@ -876,23 +879,49 @@ button:disabled {
 }
 
 .card-back {
-  background: #d1ac59;
-  border-color: #f0ce7d;
+  background: #152318;
+  border-color: #d7ae57;
+  border-width: 2px;
   display: grid;
   place-items: center;
-  background-image: linear-gradient(135deg, #dfbc68 25%, transparent 25%, transparent 50%, #dfbc68 50%, #dfbc68 75%, transparent 75%);
-  background-size: 14px 14px;
+  overflow: hidden;
+}
+
+.card-back-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* gold cross-hatch geometric pattern via layered gradients */
+.card-back-diamond {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg,  rgba(215,174,87,0.12) 0px, rgba(215,174,87,0.12) 1px, transparent 1px, transparent 10px),
+    repeating-linear-gradient(-45deg, rgba(215,174,87,0.12) 0px, rgba(215,174,87,0.12) 1px, transparent 1px, transparent 10px);
+}
+
+.card-back-label {
+  position: relative;
+  z-index: 1;
+  font: 700 13px 'DM Mono', monospace;
+  color: #d7ae57;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
 
 .card-back-pattern {
-  background: #d1ac59;
+  background: #152318;
   border: 1px solid #795e24;
   padding: 10px 4px;
 }
 
 .card-back-pattern span {
   font: 700 12px 'DM Mono', monospace;
-  color: #594619;
+  color: #d7ae57;
 }
 
 /* Joker Display Card Visual */
@@ -1084,6 +1113,28 @@ button:disabled {
 .winner-row {
   background: rgba(215, 174, 87, 0.15);
 }
+.loser-row {
+  background: rgba(231, 76, 60, 0.12);
+}
+
+.score-table td.rank-col {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.score-table td.player-name {
+  color: var(--ink);
+  font-weight: 600;
+  text-align: left;
+}
+
+.final-scoreboard h3 {
+  font: 700 13px 'DM Mono', monospace;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin: 16px 0 8px;
+}
+
 
 .trophy-header {
   font-size: 54px;
@@ -1952,5 +2003,166 @@ button:disabled {
   font: 500 13px 'DM Sans', sans-serif;
   margin-top: 8px;
 }
+/* ── Score table value cells ───────────────────────────────── */
+.score-value {
+  color: var(--ink);
+}
 
+.score-hidden-notice {
+  color: var(--muted);
+  font: 14px 'DM Mono', monospace;
+  margin: 24px 0;
+  line-height: 1.6;
+}
 
+/* ── Cards-per-player slider (FriendsPage) ─────────────────── */
+.cpp-label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  margin-top: 22px;
+}
+
+.cpp-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.cpp-value {
+  font: 700 15px 'DM Mono', monospace;
+  color: var(--gold);
+}
+
+.cpp-slider-wrapper {
+  margin-top: 10px;
+}
+
+.cpp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #2a3827;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.cpp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(215,174,87,0.25);
+  transition: box-shadow 0.15s ease;
+}
+
+.cpp-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  border: none;
+}
+
+.cpp-slider:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(215,174,87,0.35);
+}
+
+.cpp-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 0 2px;
+}
+
+.cpp-tick {
+  font: 11px 'DM Mono', monospace;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.cpp-tick-active {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* ── Toggle checkboxes (FriendsPage, SettingsPage) ─────────── */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--gold);
+  flex-shrink: 0;
+}
+
+.toggle-text {
+  font: 500 14px 'DM Sans', sans-serif;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.toggle-text small {
+  display: block;
+  font: 12px 'DM Mono', monospace;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ── Home screen: prevent white flash on inner containers ──── */
+.home-inner {
+  width: min(920px, 100%);
+  background: transparent;
+}
+
+.home-topbar {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  z-index: 10;
+  background: transparent;
+}
+
+/* ── Mode card compact variant ─────────────────────────────── */
+.mode-card.compact-card {
+  min-height: 120px;
+}
+
+/* ── Mode grid responsive ──────────────────────────────────── */
+@media (min-width: 651px) {
+  .mode-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mode-card.featured {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 900px) {
+  .mode-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .mode-card.featured {
+    grid-column: span 1;
+  }
+}

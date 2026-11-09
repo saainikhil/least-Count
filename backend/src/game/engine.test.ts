@@ -341,3 +341,56 @@ describe('Draw Deck Automatic Recycling', () => {
   });
 });
 
+describe('Custom Cards Per Player (5, 7, 9, 11)', () => {
+  it('1. Deals exactly 5 cards to each player by default or when configured with 5', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true, 5);
+    expect(engine.cardsPerPlayer).toBe(5);
+    expect(engine.hands.get('p1')).toHaveLength(5);
+    expect(engine.hands.get('p2')).toHaveLength(5);
+  });
+
+  it('2. Deals exactly 7 cards to each player when configured with 7', () => {
+    const engine = new GameEngine(['p1', 'p2', 'p3'], 3, '5', undefined, true, 7);
+    expect(engine.cardsPerPlayer).toBe(7);
+    expect(engine.hands.get('p1')).toHaveLength(7);
+    expect(engine.hands.get('p2')).toHaveLength(7);
+    expect(engine.hands.get('p3')).toHaveLength(7);
+  });
+
+  it('3. Deals exactly 9 cards to each player when configured with 9', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '5', undefined, true, 9);
+    expect(engine.cardsPerPlayer).toBe(9);
+    expect(engine.hands.get('p1')).toHaveLength(9);
+    expect(engine.hands.get('p2')).toHaveLength(9);
+  });
+
+  it('4. Deals exactly 11 cards to each player when configured with 11', () => {
+    const engine = new GameEngine(['p1', 'p2', 'p3', 'p4'], 3, '5', undefined, true, 11);
+    expect(engine.cardsPerPlayer).toBe(11);
+    expect(engine.hands.get('p1')).toHaveLength(11);
+    expect(engine.hands.get('p2')).toHaveLength(11);
+    expect(engine.hands.get('p3')).toHaveLength(11);
+    expect(engine.hands.get('p4')).toHaveLength(11);
+  });
+
+  it('5. Dynamic deck sizing ensures sufficient capacity for high card counts', () => {
+    // 2 players, 5 cards each: (2*5 + 20)/52 = 30/52 -> 2 decks (104 cards minimum)
+    const d1 = createDecksForPlayers(2, 5);
+    expect(d1).toHaveLength(104);
+
+    // 8 players, 11 cards each: (8*11 + 20)/52 = 108/52 -> 3 decks (156 cards)
+    const d2 = createDecksForPlayers(8, 11);
+    expect(d2).toHaveLength(156);
+  });
+
+  it('6. Snapshot serialization and deserialization preserves cardsPerPlayer', () => {
+    const engine = new GameEngine(['p1', 'p2'], 3, '8', undefined, true, 9);
+    const snapshot = engine.toSnapshot();
+    expect(snapshot.cardsPerPlayer).toBe(9);
+
+    const restored = GameEngine.fromSnapshot(snapshot);
+    expect(restored.cardsPerPlayer).toBe(9);
+    expect(restored.hands.get('p1')).toHaveLength(9);
+    expect(restored.hands.get('p2')).toHaveLength(9);
+  });
+});

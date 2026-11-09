@@ -45,10 +45,12 @@ export interface ClientGameState {
   hostId: string;
   expectedPlayers: number;
   totalRounds: number;
+  cardsPerPlayer: number;
   currentRound: number;
+  scoreVisible: boolean;
   status: 'WAITING_FOR_PLAYERS' | 'LOBBY' | 'IN_GAME' | 'FINISHED';
   players: PlayerInfo[];
-  
+
   // Active round state (only present when IN_GAME)
   game?: {
     setupStage?: SetupStage;

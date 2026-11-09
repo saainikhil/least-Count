@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import { CardsPerPlayer } from '../types/game';
+
+const CARDS_PER_PLAYER_OPTIONS: CardsPerPlayer[] = [5, 7, 9, 11];
+
+function snapToValidCPP(raw: number): CardsPerPlayer {
+  // Find nearest valid value
+  let nearest = CARDS_PER_PLAYER_OPTIONS[0];
+  let minDist = Math.abs(raw - nearest);
+  for (const v of CARDS_PER_PLAYER_OPTIONS) {
+    const d = Math.abs(raw - v);
+    if (d < minDist) { minDist = d; nearest = v; }
+  }
+  return nearest;
+}
 
 interface FriendsPageProps {
   initialRoomCode?: string;
   defaultName?: string;
-  onCreateRoom: (name: string, players: number, rounds: number) => void;
+  onCreateRoom: (name: string, players: number, rounds: number, cardsPerPlayer: CardsPerPlayer, scoreVisible: boolean) => void;
   onJoinRoom: (name: string, roomCode: string) => void;
   onBack: () => void;
   notice?: string;
@@ -22,6 +36,8 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
   const [roomCode, setRoomCode] = useState(initialRoomCode);
   const [playersInput, setPlayersInput] = useState('4');
   const [roundsInput, setRoundsInput] = useState('10');
+  const [cardsPerPlayer, setCardsPerPlayer] = useState<CardsPerPlayer>(5);
+  const [scoreVisible, setScoreVisible] = useState(false);
   const [localNotice, setLocalNotice] = useState('');
 
   useEffect(() => {
@@ -53,7 +69,15 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
       setLocalNotice('At least 1 round is required.');
       return;
     }
-    onCreateRoom(createName.trim(), p, r);
+    onCreateRoom(createName.trim(), p, r, cardsPerPlayer, scoreVisible);
+  };
+
+  // Slider index → value mapping
+  const sliderIndex = CARDS_PER_PLAYER_OPTIONS.indexOf(cardsPerPlayer);
+
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const idx = parseInt(e.target.value, 10);
+    setCardsPerPlayer(CARDS_PER_PLAYER_OPTIONS[idx] ?? 5);
   };
 
   return (
@@ -143,6 +167,49 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
                 +
               </button>
             </div>
+          </label>
+
+          {/* Cards Per Player Slider */}
+          <label className="cpp-label">
+            <span className="cpp-label-row">
+              Cards per Player: <strong className="cpp-value">{cardsPerPlayer}</strong>
+            </span>
+            <div className="cpp-slider-wrapper">
+              <input
+                type="range"
+                min={0}
+                max={3}
+                step={1}
+                value={sliderIndex}
+                onChange={handleSliderChange}
+                className="cpp-slider"
+                aria-label="Cards per player"
+              />
+              <div className="cpp-ticks">
+                {CARDS_PER_PLAYER_OPTIONS.map((v, i) => (
+                  <span
+                    key={v}
+                    className={`cpp-tick${i === sliderIndex ? ' cpp-tick-active' : ''}`}
+                  >
+                    {v}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </label>
+
+          {/* Score Visibility Toggle */}
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={scoreVisible}
+              onChange={e => setScoreVisible(e.target.checked)}
+              className="toggle-checkbox"
+            />
+            <span className="toggle-text">
+              Show Scores to Players
+              <small>When off, only the host can see scores</small>
+            </span>
           </label>
 
           <button className="cta" onClick={handleCreateSubmit}>

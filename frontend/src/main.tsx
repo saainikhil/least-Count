@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { io, Socket } from 'socket.io-client';
-import { ClientGameState, PlayerInfo } from './types/game';
+import { ClientGameState, PlayerInfo, CardsPerPlayer } from './types/game';
 import { GameEngine } from './game/engine';
 import { runBotTurn } from './game/systemBot';
 
@@ -22,8 +22,67 @@ import { playerProfileManager, PlayerProfile } from './services/playerProfile';
 
 import './styles/styles.css';
 
+type ScreenKey = 'home' | 'friends' | 'lobby' | 'game' | 'system' | 'settings' | 'rules' | 'about';
+
+const ROUTE_TO_SCREEN: Record<string, ScreenKey> = {
+  '/': 'home',
+  '/home': 'home',
+  '/bot': 'system',
+  '/rooms': 'friends',
+  '/rules': 'rules',
+  '/settings': 'settings',
+  '/about': 'about',
+};
+
+const SCREEN_TO_ROUTE: Partial<Record<ScreenKey, string>> = {
+  home: '/home',
+  system: '/bot',
+  friends: '/rooms',
+  rules: '/rules',
+  settings: '/settings',
+  about: '/about',
+};
+
+function getScreenForPath(path: string): ScreenKey | null {
+  const pathNoQuery = path.split('?')[0].replace(/\/+$/, '') || '/';
+  // Handle /room/:code and /game/:code
+  if (pathNoQuery.startsWith('/room/') || pathNoQuery.startsWith('/game/')) return null; // handled separately
+  return ROUTE_TO_SCREEN[pathNoQuery] ?? null;
+}
+
+function pushRoute(screen: ScreenKey, roomCode?: string) {
+  if (screen === 'lobby' || screen === 'game') {
+    if (roomCode) {
+      const targetPath = `/${screen === 'lobby' ? 'room' : 'game'}/${roomCode}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ screen, roomCode }, '', targetPath);
+      }
+    }
+    return;
+  }
+  const route = SCREEN_TO_ROUTE[screen];
+  if (route && window.location.pathname !== route) {
+    window.history.pushState({ screen }, '', route);
+  }
+}
+
+function replaceRoute(screen: ScreenKey, roomCode?: string) {
+  if (screen === 'lobby' || screen === 'game') {
+    if (roomCode) {
+      window.history.replaceState({ screen, roomCode }, '', `/${screen === 'lobby' ? 'room' : 'game'}/${roomCode}`);
+    }
+    return;
+  }
+  const route = SCREEN_TO_ROUTE[screen];
+  if (route) {
+    window.history.replaceState({ screen }, '', route);
+  }
+}
+
+// ─── App Component ────────────────────────────────────────────────────────────
+
 export function App() {
-  const [screen, setScreen] = useState<'home' | 'friends' | 'lobby' | 'game' | 'system' | 'settings' | 'rules' | 'about'>('home');
+  const [screen, setScreenState] = useState<ScreenKey>('home');
   const [name, setName] = useState('');
   const [initialRoomCode, setInitialRoomCode] = useState('');
   const [notice, setNotice] = useState('');
@@ -58,7 +117,40 @@ export function App() {
   const systemEngineRef = useRef<GameEngine | null>(null);
   const [systemStateTick, setSystemStateTick] = useState(0);
 
-  // Check URL params & handle auto-reconnect on browser refresh
+  // ── Navigation with URL sync ──────────────────────────────────────────────
+
+  const setScreen = useCallback((newScreen: ScreenKey, roomCode?: string, replace = false) => {
+    setScreenState(newScreen);
+    if (replace) {
+      replaceRoute(newScreen, roomCode);
+    } else {
+      pushRoute(newScreen, roomCode);
+    }
+  }, []);
+
+  // Listen for browser Back/Forward
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const path = window.location.pathname;
+      const pathNoQuery = path.split('?')[0].replace(/\/+$/, '') || '/';
+
+      if (pathNoQuery.startsWith('/room/') || pathNoQuery.startsWith('/game/')) {
+        // Stay on current screen (lobby/game) — the room code in the URL is cosmetic
+        return;
+      }
+
+      const targetScreen = getScreenForPath(path);
+      if (targetScreen) {
+        setScreenState(targetScreen);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // ── Initialization & Session Restore ─────────────────────────────────────
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room')?.toUpperCase().trim();
@@ -67,6 +159,12 @@ export function App() {
     if (currentProfile?.name) {
       setName(currentProfile.name);
     }
+    // Set initial URL if on root
+    const currentPath = window.location.pathname;
+    if (currentPath === '/' || currentPath === '') {
+      window.history.replaceState({ screen: 'home' }, '', '/home');
+    }
+
 
     // 1. Session restoration for System (Single-Player) Mode
     const savedMode = sessionStorage.getItem('lc_mode');
@@ -78,7 +176,8 @@ export function App() {
         systemEngineRef.current = engine;
         const savedName = sessionStorage.getItem('lc_display_name') || currentProfile?.name || 'You';
         setName(savedName);
-        setScreen('system');
+        setScreenState('system');
+        replaceRoute('system');
         setSystemStateTick(t => t + 1);
         return;
       } catch {
@@ -111,7 +210,8 @@ export function App() {
           sessionStorage.removeItem('lc_mode');
           localStorage.removeItem('lc_active_room_code');
           setNotice(res.error);
-          setScreen('home');
+          setScreenState('home');
+          replaceRoute('home');
         } else {
           sessionStorage.setItem('lc_room_code', savedRoomCode);
           sessionStorage.setItem('lc_mode', 'multiplayer');
@@ -135,7 +235,8 @@ export function App() {
         }, (res: any) => {
           if (res?.error) {
             setNotice(res.error);
-            setScreen('friends');
+            setScreenState('friends');
+            replaceRoute('friends');
           } else {
             window.history.replaceState({}, '', window.location.pathname);
             sessionStorage.setItem('lc_room_code', roomParam);
@@ -147,7 +248,8 @@ export function App() {
         // Prompt first-time profile creation, then join room
         setIsFirstTimeProfile(true);
         setShowProfileModal(true);
-        setScreen('friends');
+        setScreenState('friends');
+        replaceRoute('friends');
       }
       return;
     }
@@ -156,6 +258,14 @@ export function App() {
     if (!currentProfile) {
       setIsFirstTimeProfile(true);
       setShowProfileModal(true);
+
+    // Set URL to match the initial screen
+    const screenFromPath = getScreenForPath(currentPath);
+    if (screenFromPath) {
+      setScreenState(screenFromPath);
+    } else {
+      replaceRoute('home');
+    }
     }
   }, []);
 
@@ -221,7 +331,8 @@ export function App() {
             sessionStorage.removeItem('lc_mode');
             localStorage.removeItem('lc_active_room_code');
             setNotice('Previous room session has ended.');
-            setScreen('home');
+            setScreenState('home');
+            replaceRoute('home');
           }
         });
       }
@@ -235,9 +346,11 @@ export function App() {
         sessionStorage.setItem('lc_mode', 'multiplayer');
       }
       if (newState.status === 'IN_GAME' || newState.status === 'FINISHED') {
-        setScreen('game');
+        setScreenState('game');
+        replaceRoute('game', newState.roomCode);
       } else if (newState.status === 'LOBBY' || newState.status === 'WAITING_FOR_PLAYERS') {
-        setScreen('lobby');
+        setScreenState('lobby');
+        replaceRoute('lobby', newState.roomCode);
       }
     });
 
@@ -253,8 +366,9 @@ export function App() {
     return s;
   };
 
-  // Friends Mode Actions
-  const handleCreateRoom = (userName: string, players: number, rounds: number) => {
+  // ── Friends Mode Actions ──────────────────────────────────────────────────
+
+  const handleCreateRoom = (userName: string, players: number, rounds: number, cardsPerPlayer: CardsPerPlayer, scoreVisible: boolean) => {
     const validation = playerProfileManager.saveProfile(userName);
     if (!validation.ok) return setNotice(validation.error || 'Please enter a valid display name.');
 
@@ -266,6 +380,8 @@ export function App() {
     s.emit('room:create', {
       name: validation.profile!.name,
       expectedPlayers: players,
+      cardsPerPlayer,
+      scoreVisible,
       totalRounds: rounds,
       playerId: identity.id,
       playerToken: identity.token,
@@ -330,6 +446,19 @@ export function App() {
       if (res?.error) setNotice(res.error);
     });
   };
+  const handleSetScoreVisibility = (visible: boolean) => {
+    if (!sState || !socket) return;
+    const identity = playerProfileManager.getOrCreateIdentity();
+    socket.emit('room:set-score-visibility', {
+      roomCode: sState.roomCode,
+      playerId: identity.id,
+      playerToken: identity.token,
+      visible,
+    }, (res: any) => {
+      if (res?.error) setNotice(res.error);
+    });
+  };
+
 
   // Setup Actions
   const handleSetupShuffle = () => {
@@ -389,7 +518,7 @@ export function App() {
     setSocket(null);
     setSState(null);
     systemEngineRef.current = null;
-    setScreen('home');
+    setScreen('home', undefined, true);
   };
 
   // System Bot Mode Actions
@@ -399,7 +528,7 @@ export function App() {
     const engine = new GameEngine([humanId, botId], 5);
     systemEngineRef.current = engine;
     setNotice('Game setup ready. Perform setup actions to start!');
-    setScreen('system');
+    setScreen('system', undefined, false);
     sessionStorage.setItem('lc_mode', 'system');
     sessionStorage.setItem('lc_system_engine_state', JSON.stringify(engine.toSnapshot()));
     setSystemStateTick(t => t + 1);
@@ -674,6 +803,7 @@ export function App() {
   // Multiplayer Game Screen
   if (screen === 'game' && sState && sState.game) {
     const g = sState.game;
+    const isHost = myPlayerId === sState.hostId;
     const players: PlayerInfo[] = sState.players;
 
     return (
@@ -685,6 +815,9 @@ export function App() {
           currentRound={sState.currentRound}
           roomCode={sState.roomCode}
           noticeMessage={notice}
+          isHost={isHost}
+          scoreVisible={sState.scoreVisible}
+          onSetScoreVisibility={handleSetScoreVisibility}
           roomPlayers={players}
           onDrop={ids => {
             socket?.emit('game:drop', {
@@ -732,6 +865,8 @@ export function App() {
           <ScoreModal
             players={players}
             completedScores={g.completedRoundScores}
+            isHost={isHost}
+            scoreVisible={sState.scoreVisible}
             totalRounds={sState.totalRounds}
             onClose={() => setShowScoreModal(false)}
           />
@@ -805,6 +940,9 @@ export function App() {
           totalRounds={engine.totalRounds}
           currentRound={engine.roundNumber}
           noticeMessage={notice}
+          isHost={true}
+          scoreVisible={true}
+          onSetScoreVisibility={() => {}}
           roomPlayers={players}
           onDrop={handleSystemDrop}
           onAcquire={handleSystemAcquire}
@@ -820,6 +958,8 @@ export function App() {
           <ScoreModal
             players={players}
             completedScores={engine.completedRoundScores}
+            isHost={true}
+            scoreVisible={true}
             totalRounds={engine.totalRounds}
             onClose={() => setShowScoreModal(false)}
           />

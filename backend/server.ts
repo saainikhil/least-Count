@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
-import { GameEngine } from './src/game/engine.js';
+import { GameEngine, VALID_CARDS_PER_PLAYER, type CardsPerPlayer } from './src/game/engine.js';
 import { PlayerInfo, ClientGameState } from './src/types/game.js';
 
 export interface Room {
@@ -9,6 +9,8 @@ export interface Room {
   hostId: string;
   expectedPlayers: number;
   totalRounds: number;
+  cardsPerPlayer: CardsPerPlayer;
+  scoreVisible: boolean;
   players: Map<string, PlayerInfo>;
   game?: GameEngine;
 }
@@ -80,6 +82,9 @@ export function getSanitizedGameState(room: Room, viewerId: string): ClientGameS
     status = 'LOBBY';
   }
 
+  const isHost = viewerId === room.hostId;
+  const canSeeScores = isHost || room.scoreVisible;
+
   let gameData: ClientGameState['game'] = undefined;
 
   if (g) {
@@ -115,7 +120,8 @@ export function getSanitizedGameState(room: Room, viewerId: string): ClientGameS
       drawPileCount: g.drawPile.length,
       myHand,
       opponents,
-      completedRoundScores: g.completedRoundScores,
+      // Only send completed scores if host OR score visibility is enabled
+      completedRoundScores: canSeeScores ? g.completedRoundScores : [],
       roundNotice: formattedNotice,
     };
   }
@@ -125,6 +131,8 @@ export function getSanitizedGameState(room: Room, viewerId: string): ClientGameS
     hostId: room.hostId,
     expectedPlayers: room.expectedPlayers,
     totalRounds: room.totalRounds,
+    cardsPerPlayer: room.cardsPerPlayer,
+    scoreVisible: room.scoreVisible,
     currentRound: g ? g.roundNumber : 1,
     status,
     players: playersList,
@@ -230,7 +238,7 @@ io.on('connection', socket => {
     ack(cb, undefined, { name });
   });
 
-  socket.on('room:create', (data: { name: string; expectedPlayers: number; totalRounds: number; playerId?: string; playerToken?: string }, cb: any) => {
+  socket.on('room:create', (data: { name: string; expectedPlayers: number; totalRounds: number; cardsPerPlayer?: number; scoreVisible?: boolean; playerId?: string; playerToken?: string }, cb: any) => {
     const name = (data.name || '').trim();
     if (!name || name.length < 2 || name.length > 20) {
       return ack(cb, 'Please enter a valid display name (2-20 characters).');
@@ -244,6 +252,14 @@ io.on('connection', socket => {
     if (isNaN(rawRounds) || rawRounds < 1) {
       return ack(cb, 'At least 1 round is required.');
     }
+
+    // Validate cardsPerPlayer — must be one of [5, 7, 9, 11]
+    const rawCpp = Number(data.cardsPerPlayer) || 5;
+    const cardsPerPlayer: CardsPerPlayer = (VALID_CARDS_PER_PLAYER as readonly number[]).includes(rawCpp)
+      ? (rawCpp as CardsPerPlayer)
+      : 5;
+
+    const scoreVisible = data.scoreVisible === true ? true : false;
 
     const expectedPlayers = Math.max(2, rawPlayers);
     const totalRounds = Math.max(1, rawRounds);
@@ -267,6 +283,8 @@ io.on('connection', socket => {
       hostId: playerId,
       expectedPlayers,
       totalRounds,
+      cardsPerPlayer,
+      scoreVisible,
       players: new Map([[playerId, player]]),
     };
 
@@ -436,7 +454,7 @@ io.on('connection', socket => {
     for (const p of room.players.values()) {
       playerNamesMap.set(p.id, p.name);
     }
-    room.game = new GameEngine(playerIds, room.totalRounds, undefined, playerNamesMap);
+    room.game = new GameEngine(playerIds, room.totalRounds, undefined, playerNamesMap, false, room.cardsPerPlayer);
 
     ack(cb);
     broadcastRoomState(room);
@@ -533,6 +551,21 @@ io.on('connection', socket => {
     } catch (err) {
       ack(cb, (err as Error).message);
     }
+  });
+
+  // HOST-ONLY: Set score visibility for a room
+  socket.on('room:set-score-visibility', (data: { roomCode: string; playerId?: string; playerToken?: string; visible: boolean }, cb: any) => {
+    const { room, player } = getPlayerAndRoom(socket, data?.roomCode, data?.playerId, data?.playerToken);
+    if (!room || !player) return ack(cb, 'Room not found or not authorized.');
+
+    // Only host can change score visibility
+    if (player.id !== room.hostId) {
+      return ack(cb, 'Only the room host can change score visibility.');
+    }
+
+    room.scoreVisible = data.visible === true;
+    ack(cb, undefined, { scoreVisible: room.scoreVisible });
+    broadcastRoomState(room);
   });
 
   socket.on('disconnect', () => {

@@ -40,15 +40,19 @@ export type SetupStage =
   | 'SETUP_JOKER_CARD'
   | 'IN_GAME';
 
+export type CardsPerPlayer = 5 | 7 | 9 | 11;
+
 export interface ClientGameState {
   roomCode: string;
   hostId: string;
   expectedPlayers: number;
   totalRounds: number;
+  cardsPerPlayer: CardsPerPlayer;
   currentRound: number;
+  scoreVisible: boolean;
   status: 'WAITING_FOR_PLAYERS' | 'LOBBY' | 'IN_GAME' | 'FINISHED';
   players: PlayerInfo[];
-  
+
   game?: {
     setupStage: SetupStage;
     setupActorId: string;

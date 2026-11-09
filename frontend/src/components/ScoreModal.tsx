@@ -5,6 +5,8 @@ interface ScoreModalProps {
   players: PlayerInfo[];
   completedScores: Record<string, number>[];
   totalRounds?: number;
+  isHost?: boolean;
+  scoreVisible?: boolean;
   onClose: () => void;
 }
 
@@ -12,8 +14,26 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
   players,
   completedScores,
   totalRounds = 10,
+  isHost = false,
+  scoreVisible = true,
   onClose,
 }) => {
+  const canView = isHost || scoreVisible;
+
+  if (!canView) {
+    return (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="score-modal" onClick={e => e.stopPropagation()}>
+          <button className="close-btn" onClick={onClose}>✕</button>
+          <h2>SCOREBOARD</h2>
+          <p className="score-hidden-notice">
+            🔒 Score visibility is currently disabled by the host.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const roundCount = Math.max(totalRounds, completedScores.length);
   const roundIndices = Array.from({ length: roundCount }, (_, i) => i);
   const isGameFinished = completedScores.length >= roundCount;
@@ -58,7 +78,7 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
                   {players.map(p => {
                     const roundScore = completedScores[i]?.[p.id];
                     return (
-                      <td key={p.id} className={roundScore === undefined ? 'empty-round' : ''}>
+                      <td key={p.id} className={`score-value${roundScore === undefined ? ' empty-round' : ''}`}>
                         {roundScore !== undefined ? roundScore : '—'}
                       </td>
                     );

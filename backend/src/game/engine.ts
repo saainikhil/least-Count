@@ -15,8 +15,11 @@ export function scoreHand(hand: Card[], jokerRank?: Rank): number {
   return hand.reduce((sum, card) => sum + getCardValue(card, jokerRank), 0);
 }
 
-export function createDecksForPlayers(playerCount: number): Card[] {
-  const decksCount = Math.max(2, Math.ceil((playerCount * 5 + 20) / 52));
+export const VALID_CARDS_PER_PLAYER = [5, 7, 9, 11] as const;
+export type CardsPerPlayer = typeof VALID_CARDS_PER_PLAYER[number];
+
+export function createDecksForPlayers(playerCount: number, cardsPerPlayer = 5): Card[] {
+  const decksCount = Math.max(2, Math.ceil((playerCount * cardsPerPlayer + 20) / 52));
   const cards: Card[] = [];
   for (let d = 1; d <= decksCount; d++) {
     for (const suit of SUITS) {
@@ -62,6 +65,7 @@ export class GameEngine {
   startingPlayerId = '';
   roundNumber = 1;
   totalRounds = 10;
+  cardsPerPlayer: CardsPerPlayer = 5;
   phase: GamePhase = 'LOBBY';
   pendingPick: Card | null = null;
   completedRoundScores: Record<string, number>[] = [];
@@ -73,11 +77,13 @@ export class GameEngine {
     totalRounds = 10,
     customJoker?: Rank,
     playerNamesMap?: Map<string, string> | Record<string, string>,
-    autoStartSetup = false
+    autoStartSetup = false,
+    cardsPerPlayer: CardsPerPlayer = 5
   ) {
     if (playerIds.length < 2) throw new Error('At least 2 players required');
     this.players = [...playerIds];
     this.totalRounds = Math.max(1, totalRounds);
+    this.cardsPerPlayer = VALID_CARDS_PER_PLAYER.includes(cardsPerPlayer as CardsPerPlayer) ? cardsPerPlayer : 5;
     if (playerNamesMap) {
       this.setPlayerNames(playerNamesMap);
     }
@@ -99,7 +105,7 @@ export class GameEngine {
   startRound(roundNum: number, customJoker?: Rank, autoStartSetup = false) {
     this.roundNumber = roundNum;
     this.roundNotice = undefined;
-    
+
     // Rotating distributor/dealer: Round 1 -> P0, Round 2 -> P1, etc.
     const startIdx = (roundNum - 1) % this.players.length;
     this.startingPlayerId = this.players[startIdx];
@@ -142,13 +148,13 @@ export class GameEngine {
       throw new Error(`Only ${this.getPlayerName(this.setupActorId)} can shuffle and distribute cards`);
     }
 
-    // Generate & shuffle decks (104 cards for 2+ players)
-    const deckCards = shuffleDeck(createDecksForPlayers(this.players.length));
+    // Generate & shuffle decks (104+ cards for all players)
+    const deckCards = shuffleDeck(createDecksForPlayers(this.players.length, this.cardsPerPlayer));
 
-    // Deal 5 cards to each player in exact room join order
+    // Deal cardsPerPlayer cards to each player in exact room join order
     this.hands.clear();
     for (const pId of this.players) {
-      this.hands.set(pId, deckCards.splice(0, 5));
+      this.hands.set(pId, deckCards.splice(0, this.cardsPerPlayer));
     }
 
     this.tempDeck = deckCards;
@@ -409,6 +415,7 @@ export class GameEngine {
       setupActorId: this.setupActorId,
       roundNumber: this.roundNumber,
       totalRounds: this.totalRounds,
+      cardsPerPlayer: this.cardsPerPlayer,
       phase: this.phase,
       pendingPick: this.pendingPick,
       completedRoundScores: [...this.completedRoundScores],
@@ -431,6 +438,7 @@ export class GameEngine {
     engine.setupActorId = snapshot.setupActorId;
     engine.roundNumber = snapshot.roundNumber;
     engine.totalRounds = snapshot.totalRounds;
+    engine.cardsPerPlayer = snapshot.cardsPerPlayer ?? 5;
     engine.phase = snapshot.phase;
     engine.pendingPick = snapshot.pendingPick;
     engine.completedRoundScores = [...snapshot.completedRoundScores];
@@ -454,6 +462,7 @@ export interface SystemEngineSnapshot {
   setupActorId: string;
   roundNumber: number;
   totalRounds: number;
+  cardsPerPlayer: CardsPerPlayer;
   phase: GamePhase;
   pendingPick: Card | null;
   completedRoundScores: Record<string, number>[];

@@ -11,6 +11,9 @@ interface TableProps {
   currentRound: number;
   roomCode?: string;
   noticeMessage?: string;
+  isHost?: boolean;
+  scoreVisible?: boolean;
+  onSetScoreVisibility?: (visible: boolean) => void;
   roomPlayers?: PlayerInfo[];
   onDrop: (cardIds: string[]) => void;
   onAcquire: (kind: 'draw' | 'pick') => void;
@@ -29,6 +32,9 @@ export const Table: React.FC<TableProps> = ({
   currentRound,
   roomCode,
   noticeMessage,
+  isHost = false,
+  scoreVisible = true,
+  onSetScoreVisibility,
   roomPlayers,
   onDrop,
   onAcquire,
@@ -310,6 +316,16 @@ export const Table: React.FC<TableProps> = ({
                     onChange={e => setShowDevScore(e.target.checked)}
                   />
                   <span>SHOW CURRENT SCORE</span>
+                {isHost && onSetScoreVisibility && (
+                  <label className="dev-setting-option">
+                    <input
+                      type="checkbox"
+                      checked={scoreVisible}
+                      onChange={e => onSetScoreVisibility(e.target.checked)}
+                    />
+                    <span>SHOW SCORES TO PLAYERS</span>
+                  </label>
+                )}
                 </label>
                 {onExit && (
                   <div className="settings-exit-wrapper">

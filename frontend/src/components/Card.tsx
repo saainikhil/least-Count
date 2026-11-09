@@ -61,8 +61,9 @@ export const Card: React.FC<CardProps> = ({
   if (isBack) {
     return (
       <div className="card card-back" onClick={disabled ? undefined : onClick}>
-        <div className="card-back-pattern">
-          <span>LC</span>
+        <div className="card-back-inner">
+          <div className="card-back-diamond" />
+          <span className="card-back-label">LC</span>
         </div>
       </div>
     );
