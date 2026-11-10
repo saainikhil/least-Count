@@ -4,11 +4,11 @@ interface SettingsPageProps {
   theme: string;
   font: string;
   cardStyle: string;
-  // soundEnabled?: boolean; // [SOUND_FEATURE_DISABLED]
+  soundEnabled?: boolean;
   onThemeChange: (t: string) => void;
   onFontChange: (f: string) => void;
   onCardStyleChange: (c: string) => void;
-  // onSoundChange?: (enabled: boolean) => void; // [SOUND_FEATURE_DISABLED]
+  onSoundChange?: (enabled: boolean) => void;
   onBack: () => void;
 }
 
@@ -16,11 +16,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   theme,
   font,
   cardStyle,
-  // soundEnabled, // [SOUND_FEATURE_DISABLED]
+  soundEnabled = true,
   onThemeChange,
   onFontChange,
   onCardStyleChange,
-  // onSoundChange, // [SOUND_FEATURE_DISABLED]
+  onSoundChange,
   onBack,
 }) => {
   return (
@@ -32,15 +32,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <div className="simple-card settings-card">
         <h2>Settings</h2>
 
-        {/* [SOUND_FEATURE_DISABLED]
-        <label>
-          SOUND EFFECTS
-          <select value={soundEnabled ? 'ON' : 'OFF'} onChange={e => onSoundChange?.(e.target.value === 'ON')}>
-            <option value="ON">ON (Default)</option>
-            <option value="OFF">OFF</option>
-          </select>
+        {/* Sound Effects */}
+        <label className="toggle-label settings-toggle-label">
+          <input
+            type="checkbox"
+            checked={soundEnabled}
+            onChange={e => onSoundChange?.(e.target.checked)}
+            className="toggle-checkbox"
+            aria-label="Sound Effects"
+          />
+          <span className="toggle-text">
+            Sound Effects
+            <small>{soundEnabled ? 'Enabled — will play when implemented' : 'Disabled'}</small>
+          </span>
         </label>
-        */}
 
         <label>
           THEME

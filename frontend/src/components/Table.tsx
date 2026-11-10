@@ -11,10 +11,12 @@ interface TableProps {
   currentRound: number;
   roomCode?: string;
   noticeMessage?: string;
+  roomPlayers?: PlayerInfo[];
   isHost?: boolean;
   scoreVisible?: boolean;
+  soundEnabled?: boolean;
   onSetScoreVisibility?: (visible: boolean) => void;
-  roomPlayers?: PlayerInfo[];
+  onSoundChange?: (enabled: boolean) => void;
   onDrop: (cardIds: string[]) => void;
   onAcquire: (kind: 'draw' | 'pick') => void;
   onLeastCount: () => void;
@@ -32,10 +34,12 @@ export const Table: React.FC<TableProps> = ({
   currentRound,
   roomCode,
   noticeMessage,
+  roomPlayers,
   isHost = false,
   scoreVisible = true,
+  soundEnabled = true,
   onSetScoreVisibility,
-  roomPlayers,
+  onSoundChange,
   onDrop,
   onAcquire,
   onLeastCount,
@@ -299,16 +303,14 @@ export const Table: React.FC<TableProps> = ({
             {showSettingsMenu && (
               <div className="dev-settings-popover">
                 <div className="dev-settings-header">SETTINGS</div>
-                {/* [SOUND_FEATURE_DISABLED]
                 <label className="dev-setting-option">
                   <input
                     type="checkbox"
                     checked={soundEnabled}
-                    onChange={e => soundManager.setSoundEnabled(e.target.checked)}
+                    onChange={e => onSoundChange?.(e.target.checked)}
                   />
                   <span>SOUND EFFECTS: {soundEnabled ? 'ON' : 'OFF'}</span>
                 </label>
-                */}
                 <label className="dev-setting-option">
                   <input
                     type="checkbox"
@@ -316,6 +318,7 @@ export const Table: React.FC<TableProps> = ({
                     onChange={e => setShowDevScore(e.target.checked)}
                   />
                   <span>SHOW CURRENT SCORE</span>
+                </label>
                 {isHost && onSetScoreVisibility && (
                   <label className="dev-setting-option">
                     <input
@@ -326,7 +329,6 @@ export const Table: React.FC<TableProps> = ({
                     <span>SHOW SCORES TO PLAYERS</span>
                   </label>
                 )}
-                </label>
                 {onExit && (
                   <div className="settings-exit-wrapper">
                     <button className="exit-button-red" onClick={onExit}>

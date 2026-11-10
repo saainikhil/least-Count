@@ -125,8 +125,8 @@ button:disabled {
 .brand h1 {
   font: 700 clamp(35px, 5.2vw, 60px) / 0.92 'Playfair Display', serif;
   letter-spacing: -2px;
-  white-space: nowrap;
   margin: 0;
+  white-space: nowrap;
 }
 
 .brand h1 em {
@@ -663,8 +663,8 @@ button:disabled {
   justify-content: center;
   box-sizing: border-box;
 }
-.mini-card-backs .card-back-label,
 
+.mini-card-backs .card-back-label,
 .mini-card-backs .card-back-pattern span {
   font: 800 9px 'DM Mono', monospace;
   color: #d7ae57;
@@ -1113,6 +1113,7 @@ button:disabled {
 .winner-row {
   background: rgba(215, 174, 87, 0.15);
 }
+
 .loser-row {
   background: rgba(231, 76, 60, 0.12);
 }
@@ -1134,7 +1135,6 @@ button:disabled {
   letter-spacing: 1px;
   margin: 16px 0 8px;
 }
-
 
 .trophy-header {
   font-size: 54px;
@@ -2003,6 +2003,7 @@ button:disabled {
   font: 500 13px 'DM Sans', sans-serif;
   margin-top: 8px;
 }
+
 /* ── Score table value cells ───────────────────────────────── */
 .score-value {
   color: var(--ink);
@@ -2166,3 +2167,30 @@ button:disabled {
     grid-column: span 1;
   }
 }
+
+/* ── Settings: sound toggle row ────────────────────────────── */
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-toggle-row:last-of-type {
+  border-bottom: none;
+}
+
+.settings-toggle-label {
+  font: 500 14px 'DM Sans', sans-serif;
+  color: var(--ink);
+}
+
+.settings-toggle-label small {
+  display: block;
+  font: 12px 'DM Mono', monospace;
+  color: var(--muted);
+  margin-top: 2px;
+}
+

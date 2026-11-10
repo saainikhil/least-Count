@@ -15,12 +15,12 @@ import { Table } from './components/Table';
 import { ScoreModal } from './components/ScoreModal';
 import { GameOverModal } from './components/GameOverModal';
 import { ProfileModal } from './components/ProfileModal';
-// [SOUND_FEATURE_DISABLED]
-// import { soundManager } from './services/soundManager';
-// import { useGameSounds } from './hooks/useGameSounds';
+import { soundManager } from './services/soundManager';
 import { playerProfileManager, PlayerProfile } from './services/playerProfile';
 
 import './styles/styles.css';
+
+// ─── URL Navigation helpers ───────────────────────────────────────────────────
 
 type ScreenKey = 'home' | 'friends' | 'lobby' | 'game' | 'system' | 'settings' | 'rules' | 'about';
 
@@ -106,8 +106,11 @@ export function App() {
   const [theme, setTheme] = useState('Green');
   const [font, setFont] = useState('DM Sans');
   const [cardStyle, setCardStyle] = useState('Classic');
-  // [SOUND_FEATURE_DISABLED] Sound settings disabled for current release
-  // const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => soundManager.isEnabled());
+
+  useEffect(() => {
+    return soundManager.subscribe(enabled => setSoundEnabled(enabled));
+  }, []);
 
   // Socket & Room State
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -159,12 +162,12 @@ export function App() {
     if (currentProfile?.name) {
       setName(currentProfile.name);
     }
+
     // Set initial URL if on root
     const currentPath = window.location.pathname;
     if (currentPath === '/' || currentPath === '') {
       window.history.replaceState({ screen: 'home' }, '', '/home');
     }
-
 
     // 1. Session restoration for System (Single-Player) Mode
     const savedMode = sessionStorage.getItem('lc_mode');
@@ -258,6 +261,7 @@ export function App() {
     if (!currentProfile) {
       setIsFirstTimeProfile(true);
       setShowProfileModal(true);
+    }
 
     // Set URL to match the initial screen
     const screenFromPath = getScreenForPath(currentPath);
@@ -265,7 +269,6 @@ export function App() {
       setScreenState(screenFromPath);
     } else {
       replaceRoute('home');
-    }
     }
   }, []);
 
@@ -380,9 +383,9 @@ export function App() {
     s.emit('room:create', {
       name: validation.profile!.name,
       expectedPlayers: players,
+      totalRounds: rounds,
       cardsPerPlayer,
       scoreVisible,
-      totalRounds: rounds,
       playerId: identity.id,
       playerToken: identity.token,
     }, (res: any) => {
@@ -446,6 +449,7 @@ export function App() {
       if (res?.error) setNotice(res.error);
     });
   };
+
   const handleSetScoreVisibility = (visible: boolean) => {
     if (!sState || !socket) return;
     const identity = playerProfileManager.getOrCreateIdentity();
@@ -459,7 +463,6 @@ export function App() {
     });
   };
 
-
   // Setup Actions
   const handleSetupShuffle = () => {
     if (!sState || !socket) return;
@@ -471,8 +474,6 @@ export function App() {
     }, (res: any) => {
       if (res?.error) {
         setNotice(res.error);
-      } else {
-        // soundManager.playShuffle(); // [SOUND_FEATURE_DISABLED]
       }
     });
   };
@@ -521,7 +522,8 @@ export function App() {
     setScreen('home', undefined, true);
   };
 
-  // System Bot Mode Actions
+  // ── System Bot Mode Actions ───────────────────────────────────────────────
+
   const startSystemMode = () => {
     const humanId = 'human-player';
     const botId = 'system-bot';
@@ -545,7 +547,6 @@ export function App() {
         setTimeout(() => {
           if (engine.setupStage === 'SETUP_SHUFFLE') {
             engine.shuffleAndDistribute('system-bot');
-            // soundManager.playShuffle(); // [SOUND_FEATURE_DISABLED]
           } else if (engine.setupStage === 'SETUP_OPEN_CARD') {
             engine.pickOpenCard('system-bot');
           } else if (engine.setupStage === 'SETUP_JOKER_CARD') {
@@ -577,7 +578,6 @@ export function App() {
     if (!engine) return;
     try {
       engine.shuffleAndDistribute('human-player');
-      // soundManager.playShuffle(); // [SOUND_FEATURE_DISABLED]
       setSystemStateTick(t => t + 1);
     } catch (err) {
       setNotice((err as Error).message);
@@ -612,7 +612,6 @@ export function App() {
     if (!engine) return;
     try {
       engine.drop('human-player', cardIds);
-      // soundManager.playCardDrop(false); // [SOUND_FEATURE_DISABLED]
       setNotice('');
       setSystemStateTick(t => t + 1);
     } catch (err) {
@@ -624,12 +623,7 @@ export function App() {
     const engine = systemEngineRef.current;
     if (!engine) return;
     try {
-      const willRecycle = kind === 'draw' && engine.drawPile.length === 0 && engine.discardPile.length > 1;
       engine.acquire('human-player', kind);
-      // [SOUND_FEATURE_DISABLED]
-      // if (willRecycle) soundManager.playShuffle();
-      // if (kind === 'draw') soundManager.playCardDraw(false);
-      // else soundManager.playCardPick(false);
       setNotice('');
       setSystemStateTick(t => t + 1);
     } catch (err) {
@@ -674,42 +668,8 @@ export function App() {
     }
   };
 
-  // Construct active game state for engine sound tracking & Table rendering
-  const systemEngine = systemEngineRef.current;
-  const systemClientGameState = (screen === 'system' && systemEngine) ? {
-    setupStage: systemEngine.setupStage,
-    setupActorId: systemEngine.setupActorId,
-    phase: systemEngine.phase,
-    activePlayerId: systemEngine.activePlayerId,
-    startingPlayerId: systemEngine.startingPlayerId,
-    jokerRank: systemEngine.jokerRank,
-    openCard: systemEngine.openCard,
-    discardTop: systemEngine.discardPile.at(-1),
-    discardPile: systemEngine.discardPile,
-    drawPileCount: systemEngine.drawPile.length,
-    myHand: systemEngine.hands.get('human-player') || [],
-    opponents: [
-      {
-        id: 'system-bot',
-        name: 'System Bot',
-        cardCount: (systemEngine.hands.get('system-bot') || []).length,
-      },
-    ],
-    completedRoundScores: systemEngine.completedRoundScores,
-    roundNotice: systemEngine.roundNotice,
-  } : undefined;
+  // ── Render ────────────────────────────────────────────────────────────────
 
-  const activeGameState = screen === 'game' ? sState?.game : systemClientGameState;
-  const activeCurrentRound = screen === 'game' ? (sState?.currentRound || 1) : (systemEngine?.roundNumber || 1);
-  // [SOUND_FEATURE_DISABLED]
-  // const soundPlayerId = screen === 'system' ? 'human-player' : myPlayerId;
-  // useGameSounds({
-  //   myPlayerId: soundPlayerId,
-  //   gameState: activeGameState,
-  //   currentRound: activeCurrentRound,
-  // });
-
-  // Render Page Views
   if (screen === 'home') {
     return (
       <>
@@ -752,11 +712,11 @@ export function App() {
         theme={theme}
         font={font}
         cardStyle={cardStyle}
-        // soundEnabled={soundEnabled} // [SOUND_FEATURE_DISABLED]
+        soundEnabled={soundEnabled}
         onThemeChange={setTheme}
         onFontChange={setFont}
         onCardStyleChange={setCardStyle}
-        // onSoundChange={enabled => soundManager.setSoundEnabled(enabled)} // [SOUND_FEATURE_DISABLED]
+        onSoundChange={enabled => soundManager.setSoundEnabled(enabled)}
         onBack={() => setScreen('home')}
       />
     );
@@ -803,8 +763,8 @@ export function App() {
   // Multiplayer Game Screen
   if (screen === 'game' && sState && sState.game) {
     const g = sState.game;
-    const isHost = myPlayerId === sState.hostId;
     const players: PlayerInfo[] = sState.players;
+    const isHost = myPlayerId === sState.hostId;
 
     return (
       <main className="app game-screen">
@@ -815,10 +775,12 @@ export function App() {
           currentRound={sState.currentRound}
           roomCode={sState.roomCode}
           noticeMessage={notice}
+          roomPlayers={players}
           isHost={isHost}
           scoreVisible={sState.scoreVisible}
+          soundEnabled={soundEnabled}
           onSetScoreVisibility={handleSetScoreVisibility}
-          roomPlayers={players}
+          onSoundChange={enabled => soundManager.setSoundEnabled(enabled)}
           onDrop={ids => {
             socket?.emit('game:drop', {
               roomCode: sState.roomCode,
@@ -828,8 +790,6 @@ export function App() {
             }, (res: any) => {
               if (res?.error) {
                 setNotice(res.error);
-              } else {
-                // soundManager.playCardDrop(false); // [SOUND_FEATURE_DISABLED]
               }
             });
           }}
@@ -842,10 +802,6 @@ export function App() {
             }, (res: any) => {
               if (res?.error) {
                 setNotice(res.error);
-              } else {
-                // [SOUND_FEATURE_DISABLED]
-                // if (kind === 'draw') soundManager.playCardDraw(false);
-                // else soundManager.playCardPick(false);
               }
             });
           }}
@@ -865,9 +821,9 @@ export function App() {
           <ScoreModal
             players={players}
             completedScores={g.completedRoundScores}
+            totalRounds={sState.totalRounds}
             isHost={isHost}
             scoreVisible={sState.scoreVisible}
-            totalRounds={sState.totalRounds}
             onClose={() => setShowScoreModal(false)}
           />
         )}
@@ -940,10 +896,12 @@ export function App() {
           totalRounds={engine.totalRounds}
           currentRound={engine.roundNumber}
           noticeMessage={notice}
+          roomPlayers={players}
           isHost={true}
           scoreVisible={true}
+          soundEnabled={soundEnabled}
           onSetScoreVisibility={() => {}}
-          roomPlayers={players}
+          onSoundChange={enabled => soundManager.setSoundEnabled(enabled)}
           onDrop={handleSystemDrop}
           onAcquire={handleSystemAcquire}
           onLeastCount={handleSystemLeastCount}
@@ -958,9 +916,9 @@ export function App() {
           <ScoreModal
             players={players}
             completedScores={engine.completedRoundScores}
+            totalRounds={engine.totalRounds}
             isHost={true}
             scoreVisible={true}
-            totalRounds={engine.totalRounds}
             onClose={() => setShowScoreModal(false)}
           />
         )}
